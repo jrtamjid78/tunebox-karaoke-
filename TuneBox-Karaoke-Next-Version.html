@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#171329">
+<title>TuneBox Karaoke</title>
+<style>
+:root{--bg:#100d1d;--panel:#1d1830;--panel2:#29213e;--text:#f7f3ff;--muted:#b9aecb;--accent:#b58cff;--good:#78e0ae;--warn:#ffd27a;--bad:#ff9c9c}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(160deg,#17112b,#0d0b16 65%);color:var(--text);font-family:system-ui,-apple-system,"Noto Sans Bengali",sans-serif}
+header{padding:24px 18px 18px;text-align:center;background:radial-gradient(ellipse at top,#49316d 0%,transparent 70%)}
+.logo{font-size:30px;font-weight:800;letter-spacing:.3px}.logo span{color:var(--accent)}header p{margin:6px 0;color:var(--muted);font-size:14px}
+nav{display:flex;gap:8px;padding:0 12px 14px;overflow:auto;position:sticky;top:0;background:#100d1df2;z-index:5}
+nav button,.btn{border:0;border-radius:12px;padding:11px 14px;background:var(--panel2);color:var(--text);font-weight:650;white-space:nowrap}
+nav button.active,.btn.primary{background:var(--accent);color:#1a1028}
+main{max-width:760px;margin:auto;padding:0 13px 35px}.page{display:none}.page.active{display:block}
+.card{background:var(--panel);border:1px solid #382d50;border-radius:18px;padding:16px;margin:0 0 13px}
+h2{font-size:20px;margin:2px 0 12px}h3{font-size:16px;margin:0 0 7px}
+p{line-height:1.55}.muted{color:var(--muted);font-size:13px}
+input,textarea,select{width:100%;border:1px solid #4a3b64;border-radius:12px;padding:12px;background:#120f20;color:var(--text);font:inherit;margin:6px 0 10px}
+.row{display:flex;gap:8px;align-items:center}.row>*{flex:1;min-width:0}
+button{cursor:pointer}.result{padding:13px 0;border-bottom:1px solid #3a304b}.result:last-child{border:0}
+.badge{display:inline-block;border-radius:30px;padding:4px 9px;font-size:11px;font-weight:700;margin:5px 4px 4px 0;background:#403653;color:#eee}
+.badge.good{background:#174b3a;color:#a8f4d0}.badge.warn{background:#5b431d;color:#ffe0a0}.badge.bad{background:#542b35;color:#ffc0c0}
+a{color:#d0b5ff}.btn{display:inline-block;text-decoration:none;text-align:center;margin:4px 3px 3px 0;font-size:13px}
+.lyricline{padding:8px 10px;border-radius:9px;color:#b9aecb;text-align:center;font-size:17px}
+.lyricline.current{background:#4a3470;color:white;font-size:21px;font-weight:800}
+#lyricsBox{max-height:300px;overflow:auto;margin-top:10px}
+audio{width:100%;margin:12px 0}label{font-size:13px;color:var(--muted)}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:15px}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<header><div class="logo">♫ Tune<span>Box</span></div><p>Search • Listen • Lyrics • Sing</p></header>
+<nav>
+<button class="active" data-page="search">গান খুঁজুন</button>
+<button data-page="library">আমার গান</button>
+<button data-page="karaoke">Karaoke</button>
+</nav>
+<main>
+<section id="search" class="page active">
+<div class="card">
+<h2>অনলাইনে গান খুঁজুন</h2>
+<p class="muted">Internet Archive-এর উন্মুক্ত অডিও সংগ্রহে খোঁজা হবে। এখানে সব বাণিজ্যিক গান নাও থাকতে পারে।</p>
+<form id="searchForm"><input id="query" placeholder="গানের নাম বা শিল্পীর নাম লিখুন" required>
+<div class="row"><select id="sort"><option value="downloads desc">জনপ্রিয়তা অনুযায়ী</option><option value="date desc">নতুন আগে</option><option value="title asc">নাম অনুযায়ী</option></select><button class="btn primary" type="submit">সার্চ</button></div></form>
+<div id="searchStatus" class="muted"></div><div id="results"></div>
+</div>
+<div class="card"><h3>লাইসেন্স বুঝে নিন</h3>
+<p class="muted">CC0/Public Domain সাধারণত উন্মুক্ত। CC BY-তে শিল্পী/উৎসের কৃতিত্ব দিতে হয়; BY-SA-তে একই ধরনের লাইসেন্সের শর্তও থাকতে পারে। NC মানে বাণিজ্যিক ব্যবহার নয়, ND মানে পরিবর্তন/রিমিক্সে সীমাবদ্ধতা। লাইসেন্সের আসল শর্ত দেখে নেবেন। শুধু অনলাইনে শোনা যায় বলেই ডাউনলোডের অনুমতি থাকে না।</p>
+</div>
+</section>
+<section id="library" class="page">
+<div class="card"><h2>আমার গান</h2><p class="muted">ফোন থেকে নিজের অডিও ফাইল যোগ করুন। ফাইলগুলো এই ব্রাউজারের স্টোরেজে থাকবে।</p>
+<input type="file" id="localFiles" accept="audio/*" multiple>
+<div id="libraryList"></div></div>
+</section>
+<section id="karaoke" class="page">
+<div class="card"><h2>Karaoke Player</h2>
+<p class="muted">গান চালান এবং সময়সহ LRC lyrics পেস্ট করুন। উদাহরণ: [00:05.00] প্রথম লাইন</p>
+<div id="nowPlaying" class="muted">এখনো কোনো গান নির্বাচন করা হয়নি।</div>
+<audio id="player" controls></audio>
+<label for="lrcInput">সময়-সহ লিরিক্স (LRC)</label>
+<textarea id="lrcInput" rows="7" placeholder="[00:05.00] প্রথম লাইন&#10;[00:10.00] দ্বিতীয় লাইন"></textarea>
+<button class="btn primary" id="loadLyrics">লিরিক্স দেখান</button>
+<div id="lyricsBox"></div>
+<div class="row"><button class="btn" id="recordBtn">🎙️ রেকর্ড শুরু</button><button class="btn" id="stopRecord" disabled>রেকর্ড বন্ধ</button></div>
+<div id="recordStatus" class="muted"></div><a id="recordDownload" class="btn hidden">রেকর্ডিং সংরক্ষণ</a>
+</div>
+<div class="card"><h3>লিরিক্স খুঁজুন</h3><p class="muted">গানের নাম দিয়ে ওয়েবে লিরিক্স খুঁজতে পারেন। সব গানের লিরিক্স পাওয়া বা ব্যবহার করার অনুমতি নিশ্চিত নয়।</p>
+<input id="lyricSearch" placeholder="গানের নাম লিখুন"><button class="btn" id="lyricSearchBtn">ওয়েবে খুঁজুন</button>
+</div>
+</section>
+</main>
+<footer>TuneBox Karaoke • ডাউনলোডের আগে উৎস ও লাইসেন্স যাচাই করুন</footer>
+<script>
+const $=id=>document.getElementById(id);
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
+ document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));b.classList.add('active');
+ document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));$(b.dataset.page).classList.add('active');
+});
+let db;
+const req=indexedDB.open('TuneBoxDB',1);
+req.onupgradeneeded=e=>{const d=e.target.result;if(!d.objectStoreNames.contains('tracks'))d.createObjectStore('tracks',{keyPath:'id',autoIncrement:true})};
+req.onsuccess=e=>{db=e.target.result;renderLibrary()};
+function store(mode='readonly'){return db.transaction('tracks',mode).objectStore('tracks')}
+function licenseInfo(url){
+ if(!url)return {label:'লাইসেন্স অনিশ্চিত',cls:'warn',ok:false,detail:'লাইসেন্সের তথ্য পাওয়া যায়নি—ডাউনলোডের অনুমতি ধরে নেবেন না।'};
+ const u=url.toLowerCase();
+ if(u.includes('creativecommons.org/publicdomain')||u.includes('creativecommons.org/licenses/zero')||u.includes('creativecommons.org/publicdomain/zero'))return {label:'CC0 / Public Domain',cls:'good',ok:true,detail:'সাধারণত পুনর্ব্যবহারের জন্য উন্মুক্ত; উৎসের তথ্যও দেখে নিন।'};
+ if(u.includes('creativecommons.org/licenses/by/'))return {label:'CC BY',cls:'good',ok:true,detail:'কৃতিত্ব/Attribution দিতে হবে।'};
+ if(u.includes('creativecommons.org/licenses/by-sa/'))return {label:'CC BY-SA',cls:'good',ok:true,detail:'কৃতিত্ব দিতে হবে; শেয়ার করলে একই লাইসেন্সের শর্ত প্রযোজ্য হতে পারে।'};
+ if(u.includes('creativecommons.org/licenses/by-nc'))return {label:'CC BY-NC',cls:'warn',ok:true,detail:'অ-বাণিজ্যিক ব্যবহারের শর্ত; সম্পূর্ণ লাইসেন্স পড়ে নিন।'};
+ if(u.includes('creativecommons.org/licenses/by-nd'))return {label:'CC BY-ND',cls:'warn',ok:true,detail:'পরিবর্তিত/রিমিক্স সংস্করণে সীমাবদ্ধতা আছে।'};
+ if(u.includes('creativecommons.org'))return {label:'Creative Commons',cls:'warn',ok:true,detail:'লাইসেন্সের নির্দিষ্ট শর্ত খুলে যাচাই করুন।'};
+ if(u.includes('publicdomain'))return {label:'Public Domain (দাবিকৃত)',cls:'warn',ok:true,detail:'উৎসের Public Domain দাবিটি যাচাই করুন।'};
+ return {label:'লাইসেন্স যাচাই প্রয়োজন',cls:'warn',ok:false,detail:'লাইসেন্সের লিংক আছে, কিন্তু স্বয়ংক্রিয়ভাবে ডাউনলোড অনুমতি নিশ্চিত করা যায়নি।'};
+}
+$('searchForm').onsubmit=async e=>{
+ e.preventDefault();const q=$('query').value.trim();if(!q)return;
+ $('results').innerHTML='';$('searchStatus').textContent='খোঁজা হচ্ছে…';
+ try{
+  const url='https://archive.org/advancedsearch.php?q='+encodeURIComponent('mediatype:audio AND title:('+q+')')+'&fl[]=identifier&fl[]=title&fl[]=creator&fl[]=licenseurl&rows=25&page=1&sort[]='+encodeURIComponent($('sort').value)+'&output=json';
+  const data=await fetch(url).then(r=>r.json());const docs=data.response?.docs||[];
+  $('searchStatus').textContent=docs.length?docs.length+'টি ফলাফল পাওয়া গেছে।':'কোনো ফলাফল পাওয়া যায়নি।';
+  docs.forEach(d=>{
+   const lic=licenseInfo(d.licenseurl);const el=document.createElement('div');el.className='result';
+   const title=document.createElement('h3');title.textContent=d.title||d.identifier;
+   const creator=document.createElement('div');creator.className='muted';creator.textContent='শিল্পী/আপলোডকারী: '+(d.creator||'তথ্য নেই');
+   const badge=document.createElement('span');badge.className='badge '+lic.cls;badge.textContent=lic.label;
+   const detail=document.createElement('div');detail.className='muted';detail.textContent=lic.detail;
+   const actions=document.createElement('div');actions.innerHTML='<button class="btn">ফাইল দেখুন</button>';
+   actions.firstChild.onclick=()=>loadItem(d,lic,el);
+   el.append(title,creator,badge,detail,actions);$('results').append(el);
+  });
+ }catch(err){$('searchStatus').textContent='সার্চ করা যায়নি। ইন্টারনেট সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।';}
+};
+async function loadItem(item,lic,container){
+ const old=container.querySelector('.files');if(old)old.remove();
+ const box=document.createElement('div');box.className='files muted';box.textContent='অডিও ফাইল খোঁজা হচ্ছে…';container.append(box);
+ try{
+  const meta=await fetch('https://archive.org/metadata/'+encodeURIComponent(item.identifier)).then(r=>r.json());
+  const files=(meta.files||[]).filter(f=>/\.(mp3|ogg|oga|wav|m4a|flac)$/i.test(f.name||'')&&!f.name.includes('_'));
+  box.textContent='';
+  if(!files.length){box.textContent='এই আইটেমে চালানোর মতো পরিচিত অডিও ফাইল পাওয়া যায়নি।';return;}
+  files.slice(0,8).forEach(f=>{
+   const row=document.createElement('div');row.style.marginTop='9px';
+   const name=document.createElement('div');name.textContent=f.name+' ('+formatSize(f.size)+')';
+   const play=document.createElement('button');play.className='btn';play.textContent='▶ চালান';play.onclick=()=>{setPlayer('https://archive.org/download/'+encodeURIComponent(item.identifier)+'/'+encodeURIComponent(f.name),item.title+' — '+f.name)};
+   const dl=document.createElement('a');dl.className='btn';dl.textContent=lic.ok?'ডাউনলোড / খুলুন':'লাইসেন্স যাচাই করে খুলুন';dl.href='https://archive.org/download/'+encodeURIComponent(item.identifier)+'/'+encodeURIComponent(f.name);dl.target='_blank';dl.rel='noopener';
+   dl.onclick=()=>{if(!lic.ok&&!confirm('লাইসেন্সে ডাউনলোডের অনুমতি নিশ্চিত নয়। উৎসের Usage & License শর্ত যাচাই করেছেন?'))return false;};
+   row.append(name,play,dl);box.append(row);
+  });
+  if(item.licenseurl){const a=document.createElement('a');a.href=item.licenseurl;a.target='_blank';a.rel='noopener';a.textContent='লাইসেন্সের শর্ত খুলুন';a.className='btn';box.append(a)}
+ }catch(e){box.textContent='ফাইলের তথ্য লোড হয়নি। পরে আবার চেষ্টা করুন।'}
+}
+function formatSize(n){if(!n)return 'আকার অজানা';n=Number(n);return n>1048576?(n/1048576).toFixed(1)+' MB':(n/1024).toFixed(0)+' KB'}
+function setPlayer(src,name){$('player').src=src;$('nowPlaying').textContent='নির্বাচিত গান: '+name;document.querySelector('[data-page="karaoke"]').click();$('player').play().catch(()=>{});}
+$('localFiles').onchange=e=>{
+ [...e.target.files].forEach(file=>{const tx=db.transaction('tracks','readwrite');tx.objectStore('tracks').add({name:file.name,blob:file,added:Date.now()});tx.oncomplete=renderLibrary;});
+ e.target.value='';
+};
+function renderLibrary(){if(!db)return;const box=$('libraryList');box.innerHTML='';store().getAll().onsuccess=e=>{
+ const list=e.target.result;if(!list.length){box.innerHTML='<p class="muted">এখনো কোনো গান যোগ করা হয়নি।</p>';return}
+ list.forEach(t=>{const row=document.createElement('div');row.className='result';const title=document.createElement('h3');title.textContent=t.name;
+ const play=document.createElement('button');play.className='btn';play.textContent='▶ চালান';play.onclick=()=>{const u=URL.createObjectURL(t.blob);setPlayer(u,t.name)};
+ const del=document.createElement('button');del.className='btn';del.textContent='মুছুন';del.onclick=()=>{if(confirm('এই গানটি লাইব্রেরি থেকে মুছবেন?')){store('readwrite').delete(t.id).onsuccess=renderLibrary}};
+ row.append(title,play,del);box.append(row);});
+}}
+let timedLyrics=[];
+$('loadLyrics').onclick=()=>{
+ timedLyrics=[];const re=/\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\](.*)/g;let m;const raw=$('lrcInput').value;
+ while((m=re.exec(raw))!==null){timedLyrics.push({time:Number(m[1])*60+Number(m[2])+Number('0.'+(m[3]||'0')),text:m[4].trim()})}
+ timedLyrics.sort((a,b)=>a.time-b.time);drawLyrics(-1);
+};
+function drawLyrics(active){const box=$('lyricsBox');box.innerHTML='';timedLyrics.forEach((l,i)=>{const d=document.createElement('div');d.className='lyricline'+(i===active?' current':'');d.textContent=l.text;box.append(d);if(i===active)d.scrollIntoView({block:'nearest',behavior:'smooth'})})}
+$('player').ontimeupdate=()=>{if(!timedLyrics.length)return;let active=-1;timedLyrics.forEach((l,i)=>{if($('player').currentTime>=l.time)active=i});drawLyrics(active)};
+$('lyricSearchBtn').onclick=()=>{const q=$('lyricSearch').value.trim();if(q)window.open('https://www.google.com/search?q='+encodeURIComponent(q+' lyrics'),'_blank','noopener')};
+let recorder,parts=[];
+$('recordBtn').onclick=async()=>{
+ try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});parts=[];recorder=new MediaRecorder(stream);recorder.ondataavailable=e=>{if(e.data.size)parts.push(e.data)};recorder.onstop=()=>{const blob=new Blob(parts,{type:recorder.mimeType||'audio/webm'});const a=$('recordDownload');a.href=URL.createObjectURL(blob);a.download='TuneBox-Recording.webm';a.classList.remove('hidden');$('recordStatus').textContent='রেকর্ডিং তৈরি হয়েছে। সংরক্ষণ বাটনে চাপ দিন।';stream.getTracks().forEach(t=>t.stop())};recorder.start();$('recordBtn').disabled=true;$('stopRecord').disabled=false;$('recordStatus').textContent='রেকর্ডিং চলছে…';
+ }catch(e){$('recordStatus').textContent='মাইক্রোফোন অনুমতি পাওয়া যায়নি বা এই ব্রাউজারে রেকর্ডিং সমর্থিত নয়।'}
+};
+$('stopRecord').onclick=()=>{if(recorder&&recorder.state!=='inactive'){recorder.stop();$('recordBtn').disabled=false;$('stopRecord').disabled=true}};
+</script>
+</body></html>
